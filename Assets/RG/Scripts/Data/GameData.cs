@@ -5,17 +5,18 @@ using System.Linq;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "GameConfiguration", menuName = "Match3/Game Config")]
-public class GameConfig : ScriptableObject
+public class GameData : ScriptableObject
 {
+    [Tooltip("Amount of pieces to create a match")]
     [SerializeField]
     private int matchCounter = 3;
     [SerializeField]
-    private Level[] gameLevels;
+    private LevelData[] gameLevels;
     [SerializeField]
     private List<Tile> gameTiles;
 
     public int MatchCounter => matchCounter;
-    public Level [] GameLevels => gameLevels;
+    public LevelData [] GameLevels => gameLevels;
     public List<Tile> GameTiles => gameTiles;
 
     private void OnValidate() {

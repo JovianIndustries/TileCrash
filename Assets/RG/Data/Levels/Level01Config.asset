@@ -15,4 +15,5 @@ MonoBehaviour:
   levelID: Level01
   bottomLeftGridAnchor: {x: -6, y: -12, z: 0}
   topRightGridAnchor: {x: 6, y: 12, z: 0}
-  gridSize: {x: 12, y: 24}
+  gridSize: {x: 6, y: 12}
+  tileScaleMultiplier: 1.8

@@ -10,10 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2bcb706879217743ac64fd05077e978, type: 3}
-  m_Name: GameConfiguration
+  m_Name: GameData
   m_EditorClassIdentifier: 
   matchCounter: 3
   gameLevels:
+  - {fileID: 11400000, guid: 95b5bbb3e617f1a4c97ed030fee1de70, type: 2}
+  - {fileID: 11400000, guid: 520c5f0dd07d2da4a8f93954c8ebc68b, type: 2}
   - {fileID: 11400000, guid: ec632f5007b2c4e43aa10e40b17661a6, type: 2}
   gameTiles:
   - {fileID: 8936270371906712714, guid: 59e088146f42e4972a3592e98e22674c, type: 3}

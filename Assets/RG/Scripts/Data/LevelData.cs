@@ -5,18 +5,20 @@ using Unity.Collections;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Level00Config", menuName = "Match3/Level Config")]
-public class Level : ScriptableObject
+public class LevelData : ScriptableObject
 {
     [Tooltip("A generic identifier for the level")]
     [SerializeField]
-    private string levelID;
-    
+    private string levelID = "Optional";
     [SerializeField]
     private Vector3 bottomLeftGridAnchor;
     [SerializeField]
     private Vector3 topRightGridAnchor;
     [Tooltip("Must specify integer values. X = length, Y = height")]
-    [SerializeField] private Vector2 gridSize;
+    [SerializeField]
+    private Vector2 gridSize;
+    [SerializeField]
+    private float tileScaleMultiplier = 1f;
 
     private GridCell[,] generatedGrid;
     public GridCell[,] GeneratedGrid {
@@ -27,6 +29,7 @@ public class Level : ScriptableObject
             return generatedGrid;
         }
     }
+    public float TileScaleMultiplier => tileScaleMultiplier;
 
     private void GenerateCellGrid() {
         var gridLength = Mathf.Abs(topRightGridAnchor.x - bottomLeftGridAnchor.x);
@@ -62,10 +65,6 @@ public class Level : ScriptableObject
     void OnValidate() {
         gridSize.x = Mathf.RoundToInt(gridSize.x);
         gridSize.y = Mathf.RoundToInt(gridSize.y);
-
-        if(levelID == null) {
-            levelID = Guid.NewGuid().ToString();
-        }
     }
 
 }
