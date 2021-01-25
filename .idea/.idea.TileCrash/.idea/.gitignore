@@ -1,0 +1,13 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/.idea.TileCrash.iml
+/projectSettingsUpdater.xml
+/contentModel.xml
+/modules.xml
+# Datasource local storage ignored files
+/../../../../../../:\Unity Projects\TileCrash\.idea\.idea.TileCrash\.idea/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
