@@ -30,11 +30,11 @@ public class LevelGridHandler : MonoBehaviour
 
     public void UpdateCell(GridCell gridCell, Tile tile) {
         gridCell.OccupyingTile = tile;
-        tile.GridCellID = gridCell.cellID;
+        tile.GridCellPos = gridCell.CellPos;
     }
 
-    public GridCell GetGridCell(LevelData levelData, Vector2 cellID) {
-        return levelData.GeneratedGrid[(int)cellID.x, (int)cellID.y];
+    public GridCell GetGridCell(LevelData levelData, CellPos cellPosID) {
+        return levelData.GeneratedGrid[cellPosID.x, cellPosID.y];
     }
     
     private void SpawnTilesLine(int gridLineIndex, GameData gameData, LevelData levelData) {
@@ -67,7 +67,6 @@ public class LevelGridHandler : MonoBehaviour
                     if(tile.TypeID != previousIDs[i]) {
                         break;
                     }
-
                     counter++;
                 }
             }

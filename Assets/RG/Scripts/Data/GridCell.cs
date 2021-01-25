@@ -1,13 +1,23 @@
 using UnityEngine;
 
-public class GridCell 
+public class GridCell
 {
-    public Vector2 cellID;
+    public CellPos CellPos { get; }
     public Vector3 CellCenterPos { get; }
     public Tile OccupyingTile { get; set; }
-
-    public GridCell(Vector2 cellID, Vector2 cellCenterPosition) {
-        this.cellID = cellID;
+    
+    public GridCell(CellPos cellPos, Vector2 cellCenterPosition) {
+        this.CellPos = cellPos;
         CellCenterPos = cellCenterPosition;
+    }
+}
+
+public struct CellPos
+{
+    public int x;
+    public int y;
+
+    public override string ToString() {
+        return $"[{x}, {y}]";
     }
 }

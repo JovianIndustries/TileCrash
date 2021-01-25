@@ -11,13 +11,13 @@ public class Tile : MonoBehaviour, IPointerDownHandler
     private string typeID;
 
     public string TypeID => typeID;
-    public Vector2 GridCellID { get; set; }
+    public CellPos GridCellPos { get; set; }
     
     private void OnValidate() {
         typeID ??= Guid.NewGuid().ToString();
     }
     
     public void OnPointerDown(PointerEventData eventData) {
-        GamePlay.pointerEvent.Invoke(this);
+        GamePlay.pointerEvent.Invoke(GridCellPos);
     }
 }
