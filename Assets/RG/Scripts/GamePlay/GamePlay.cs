@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.PlayerLoop;
 
 public class GamePlay : MonoBehaviour
 {
@@ -11,7 +12,9 @@ public class GamePlay : MonoBehaviour
     private LevelGridHandler levelGridHandler;
 
     private LevelData currentLevel;
-
+    private GridCell[,] levelGrid;
+    private List<GameObject> goToClean = new List<GameObject>();
+    
     public static readonly UnityEvent<CellPos> pointerEvent = new UnityEvent<CellPos>();
 
     private void Awake() {
@@ -39,113 +42,143 @@ public class GamePlay : MonoBehaviour
     
     private  void PlayInternal(LevelData selectedLevel) {
         levelGridHandler.SpawnLevel(gameData, selectedLevel);
+        levelGrid = levelGridHandler.CurrentGameGrid;
     }
 
     private void StartTurn(CellPos gridCellPos) {
-        DestroyTile(gridCellPos);
+        RemoveTile(gridCellPos);
         MoveTile(gridCellPos);
         EvaluateMove(gridCellPos);
     }
-    
-    private void StartTurn(CellPos startCell,  List<CellPos> gridCells) {
-        DestroyTiles(gridCells);
-        MoveTiles(gridCells);
-        EvaluateMove(startCell);
-    }
 
-    private void DestroyTiles(List<CellPos> selectedTile) {
+    private void RemoveTile(CellPos selectedTile) {
+        var gridCell =levelGridHandler.GetGridCell(currentLevel, selectedTile);
+        Debug.Log($"Destroyed {selectedTile.ToString()}");
+        var go = gridCell.OccupyingTile.gameObject;
+        go.SetActive(false);
+        goToClean.Add(go);
+        levelGridHandler.UpdateCell(gridCell, null);
+    }
+    
+    private void RemoveTiles(List<CellPos> selectedTile) {
         for(int i = 0; i < selectedTile.Count; i++) {
-            DestroyTile(selectedTile[i]);
+            RemoveTile(selectedTile[i]);
         }
     }
     
-    private void DestroyTile(CellPos selectedTile) {
-        Debug.Log($"Destroyed {selectedTile.x}, {selectedTile.y}");
-        Destroy(levelGridHandler.GetGridCell(currentLevel, selectedTile).OccupyingTile.gameObject);
+    private void MoveTile(CellPos selectedTile) {
+        var gridHeight = levelGrid.GetLength(1);
+        var x = selectedTile.x;
+        var y = selectedTile.y + 1;
+        var tileToMove = y;
+        var top = levelGrid[x, gridHeight - 1];
+        GridCell nullCell = levelGrid[x, y];
+        
+        while(true) {
+            if(y == gridHeight) {
+                break;
+            }
+            if(y == gridHeight - 1) {
+                levelGridHandler.SpawnTile(gameData, currentLevel, top);
+            }
+            var moveFrom = levelGrid[x, y];
+            var moveTo = levelGrid[x, selectedTile.y];
+            if(moveFrom.OccupyingTile != null) {
+                moveFrom.OccupyingTile.transform.position = moveTo.CellCenterPos;
+                levelGridHandler.UpdateCell(moveTo, moveFrom.OccupyingTile);
+            }
+            else {
+                nullCell = moveFrom;
+            }
+
+            y++;
+            
+            if(tileToMove == gridHeight - 1 && nullCell != null) {
+                MoveTile(nullCell.CellPos);
+                break;
+            }
+        }
+        
+        // var gridHeight = levelGrid.GetLength(1);
+        // var x = selectedTile.x;
+        // var y = selectedTile.y + 1;
+        //
+        // for(int j = y; j < gridHeight; j++) {
+        //     var moveFrom = levelGrid[x, j];
+        //     var moveTo = levelGrid[x, j - 1];
+        //     if(moveFrom.OccupyingTile != null) {
+        //         moveFrom.OccupyingTile.transform.position = moveTo.CellCenterPos;
+        //         levelGridHandler.UpdateCell(moveTo, moveFrom.OccupyingTile);
+        //     }
+        //     else {
+        //         MoveTile(moveFrom.CellPos);
+        //     }
+        // }
+        // var top = levelGrid[x, gridHeight - 1];
+        // if (top.OccupyingTile == null) {
+        //     levelGridHandler.SpawnTile(gameData, currentLevel, levelGrid[x, gridHeight - 1]);
+        // }
+        // else {
+        //     Debug.LogError("Tile already present at that position!");
+        // }
     }
 
     
-    private void EvaluateMove(CellPos startCell) {
-        List<List<CellPos>> tilesToScore = new List<List<CellPos>>();
-        var grid = levelGridHandler.CurrentGameGrid;
-        
-        var startCellY = startCell.y;
-        var gridHeight = grid.GetLength(1);
-        var gridWidth = grid.GetLength(0);
-
-        //Debug.Log(gridWidth + " " + gridHeight + " " + statCellY);
-            
-        for(int j = startCellY; j < gridHeight; j++) {
-            List<CellPos> candidates = new List<CellPos>();
-            for(int k = 0; k < gridWidth - 1; k++) {
-                var currentGrid = grid[k, j];
-                var nextGrid = grid[k + 1, j];
-                Debug.Log($" current grid is {currentGrid.CellPos.ToString()} / next grid is {nextGrid.CellPos.ToString()}");
-                var currentPos = new CellPos() {x = currentGrid.CellPos.x, y = currentGrid.CellPos.y};
-                var nextPost = new CellPos() {x = nextGrid.CellPos.x, y = nextGrid.CellPos.y};
-                
-                if(k == 0) {
-                    candidates.Add(currentPos);
-                    Debug.Log($"Added current cell as {candidates[candidates.Count-1].ToString()}");
-                }
-                
-                if(currentGrid.OccupyingTile.TypeID == nextGrid.OccupyingTile.TypeID) {
-                    for(int l = 0; l < candidates.Count; l++) {
-                        if(candidates[l].ToString() == currentPos.ToString()) {
-                            break;
-                        }
-                        candidates.Add(currentPos);
-                        Debug.Log($"Added current cell as {candidates[candidates.Count-1].ToString()}");
-                    }
-                    candidates.Add(nextPost);
-                    Debug.Log($"Added next cell as {candidates[candidates.Count-1].ToString()}");
-                }
-                else {
-                    if(candidates.Count > 2) {
-                        tilesToScore.Add(new List<CellPos>(candidates));
-                    }
-                    else {
-                        candidates.Clear();
-                    }
-                }
-            }
-            candidates.Clear();
-        }
-        
-        Debug.Log(tilesToScore.Count);
-
-        if(tilesToScore.Count > 0) {
-            List<CellPos> gridCellsToProcess = new List<CellPos>();
-            for(int i = 0; i < tilesToScore.Count; i++) {
-                gridCellsToProcess.AddRange(tilesToScore[i]);
-            }
-            
-            DestroyTiles(gridCellsToProcess);
-            MoveTiles(gridCellsToProcess);
-            EvaluateMove(startCell);
-            //StartTurn(startCell, gridCellsToProcess);
-        }
-    }
-
     private void MoveTiles(List<CellPos> gridCellIDs) {
         for(int i = 0; i < gridCellIDs.Count; i++) {
             MoveTile(gridCellIDs[i]);
         }
     }
-    
-    private void MoveTile(CellPos gridCellIDs) {
-        var grid = levelGridHandler.CurrentGameGrid;
-        var gridHeight = grid.GetLength(1);
-        var x = gridCellIDs.x;
-        var y = gridCellIDs.y;
 
-        for(int j = y + 1; j < gridHeight; j++) {
-            var moveFrom = grid[x, j];
-            var moveTo = grid[x, j - 1];
-            moveFrom.OccupyingTile.transform.position = moveTo.CellCenterPos;
-            levelGridHandler.UpdateCell(moveTo, moveFrom.OccupyingTile);
+    private void EvaluateMove(CellPos startCell) {
+        List<List<CellPos>> tilesToScore = new List<List<CellPos>>();
+        List<CellPos> collector = new List<CellPos>();
+        var startCellY = startCell.y;
+        var gridHeight = levelGrid.GetLength(1);
+        var gridWidth = levelGrid.GetLength(0);
+        
+        while(true) {
+            //Debug.Log(gridWidth + " " + gridHeight + " " + statCellY);
+
+            for(int j = startCellY; j < gridHeight; j++) {
+                for(int i = 0; i < gridWidth - 1; i++) {
+                    if(levelGrid[i, j].OccupyingTile.Equals(levelGrid[i + 1, j].OccupyingTile)) {
+                        if(collector.Count == 0) {
+                            collector.AddRange(new List<CellPos>() {new CellPos() {x = i, y = j}, new CellPos() {x = i + 1, y = j}});
+                        }
+                        else {
+                            collector.Add(new CellPos() {x = i + 1, y = j});
+                        }
+                    }
+                }
+
+                if(collector.Count > 2) {
+                    tilesToScore.Add(new List<CellPos>(collector));
+                }
+                
+                collector.Clear();
+            }
+
+            Debug.Log(tilesToScore.Count);
+
+            if(tilesToScore.Count > 0) {
+                for(int i = 0; i < tilesToScore.Count; i++) {
+                    RemoveTiles(tilesToScore[i]);
+                    MoveTiles(tilesToScore[i]);
+                }
+                tilesToScore.Clear();
+                continue;
+            }
+            break;
         }
-        levelGridHandler.SpawnTile(gameData, currentLevel, grid[x, gridHeight-1]);
+
+        Clean();
+    }
+
+    private void Clean() {
+        for(int i = 0; i < goToClean.Count; i++) {
+            Destroy(goToClean[i]);
+        }
     }
 
     private void OnTileMouseDown(CellPos cellPos) {

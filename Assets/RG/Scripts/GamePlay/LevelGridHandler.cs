@@ -30,7 +30,9 @@ public class LevelGridHandler : MonoBehaviour
 
     public void UpdateCell(GridCell gridCell, Tile tile) {
         gridCell.OccupyingTile = tile;
-        tile.GridCellPos = gridCell.CellPos;
+        if (tile != null) {
+            tile.GridCellPos = gridCell.CellPos;
+        }
     }
 
     public GridCell GetGridCell(LevelData levelData, CellPos cellPosID) {

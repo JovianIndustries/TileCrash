@@ -17,6 +17,10 @@ public class Tile : MonoBehaviour, IPointerDownHandler
         typeID ??= Guid.NewGuid().ToString();
     }
     
+    public bool Equals(Tile other) {
+        return typeID == other.TypeID;
+    }
+    
     public void OnPointerDown(PointerEventData eventData) {
         GamePlay.pointerEvent.Invoke(GridCellPos);
     }
