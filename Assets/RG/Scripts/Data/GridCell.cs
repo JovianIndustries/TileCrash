@@ -1,26 +1,43 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridCell
 {
-    public CellPos CellPos { get; }
-    public Vector3 CellCenterPos { get; }
-    public Tile OccupyingTile { get; set; }
     
-    public GridCell(CellPos cellPos, Vector2 cellCenterPosition) {
-        this.CellPos = cellPos;
+    private Tile occupyingTile;
+    private readonly Cell cell;
+
+    public Cell Cell => cell;
+    public Vector3 CellCenterPos { get; }
+    public Tile OccupyingTile => occupyingTile;
+
+    public GridCell(Cell cell, Vector2 cellCenterPosition) {
+        this.cell = cell;
         CellCenterPos = cellCenterPosition;
+    }
+
+    public bool HasTile() {
+        return OccupyingTile != null;
+    }
+
+    public void SetTile(Tile tile) {
+        occupyingTile = tile;
+        if (tile != null) {
+            tile.GridCell = cell;
+        }
     }
 }
 
-public struct CellPos
+public struct Cell
 {
     public int x;
     public int y;
 
-    public CellPos(int x, int y) {
+    public Cell(int x, int y) {
         this.x = x;
         this.y = y;
     }
+    
     public override string ToString() {
         return $"[{x}, {y}]";
     }
@@ -30,11 +47,7 @@ public struct CellPos
         {
             return false;
         }
-        var celPos = (CellPos) obj;
-        return celPos.x == x && celPos.y == y;
-    }
-
-    public bool Equals(CellPos other) {
-        return x == other.x && y == other.y;
+        var cell = (Cell) obj;
+        return cell.x == x && cell.y == y;
     }
 }

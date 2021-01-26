@@ -43,13 +43,13 @@ public class LevelData : ScriptableObject
 
         for(var i = 0; i < horizCelNo; i++) {
             for(var j = 0; j < vertCelNo; j++) {
-                var cellPos = new CellPos{x = i, y = j};
-                GeneratedGrid[i, j] = new GridCell(cellPos, GetCellCenterPosition(cellPos));
+                var cell = new Cell{x = i, y = j};
+                GeneratedGrid[i, j] = new GridCell(cell, GetCellCenterPosition(cell));
             }
         }
 
-        Vector3 GetCellCenterPosition(CellPos cellPos) {
-            var cellAnchor = new Vector2(bottomLeftGridAnchor.x + cellPos.x * celEdgeLength, bottomLeftGridAnchor.y + cellPos.y * celEdgeLength);
+        Vector3 GetCellCenterPosition(Cell cell) {
+            var cellAnchor = new Vector2(bottomLeftGridAnchor.x + cell.x * celEdgeLength, bottomLeftGridAnchor.y + cell.y * celEdgeLength);
             var cellCenterPos = new Vector2(cellAnchor.x + celEdgeLength / 2, cellAnchor.y + celEdgeLength / 2);
             // DebugDrawCell(cellAnchor);
             return cellCenterPos;

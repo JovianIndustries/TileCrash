@@ -5,9 +5,9 @@ using UnityEngine;
 
 public class Initializer : MonoBehaviour
 {
-    [SerializeField] private GameObject ui;
+    [SerializeField] private UIHandler uiHandler;
 
     private void Awake() {
-        ui?.SetActive(true);
+        uiHandler.Togglemenu(true);
     }
 }

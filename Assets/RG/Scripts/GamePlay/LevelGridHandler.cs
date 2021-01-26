@@ -9,14 +9,29 @@ public class LevelGridHandler : MonoBehaviour
 {
     private GridCell[,] currentGameGrid;
     public GridCell[,] CurrentGameGrid => currentGameGrid;
-    
+
     public void SpawnLevel(GameData gameData, LevelData levelData) {
         currentGameGrid = levelData.GeneratedGrid;
         for(int i = 0; i < currentGameGrid.GetLength(1); i++) {
             SpawnTilesLine(i, gameData, levelData);
         }
     }
-    
+
+    public void CleanLeveL() {
+        if(currentGameGrid == null) {
+            return;
+        }
+        for(int i = 0; i < currentGameGrid.GetLength(0); i++) {
+            for(int j = 0; j < currentGameGrid.GetLength(1); j++) {
+                if(currentGameGrid[i, j].HasTile()) {
+                    Destroy(currentGameGrid[i, j].OccupyingTile.gameObject);
+                    currentGameGrid[i, j].SetTile(null);
+                }
+            }
+        }
+        currentGameGrid = null;
+    }
+
     public Tile SpawnTile(GameData gameData, LevelData levelData, GridCell currentCell, List<string> previousIDs = null) {
         var tiles = gameData.GameTiles;
         var tileToSpawn = GetRandomTile(tiles, previousIDs);
@@ -24,19 +39,12 @@ public class LevelGridHandler : MonoBehaviour
         var scale = spawnedTileObject.transform.localScale;
         var spawnedTile = spawnedTileObject.GetComponent<Tile>();
         spawnedTileObject.transform.localScale = scale * levelData.TileScaleMultiplier;
-        UpdateCell(currentCell, spawnedTile);
+        currentCell.SetTile(spawnedTile);
         return spawnedTile;
     }
 
-    public void UpdateCell(GridCell gridCell, Tile tile) {
-        gridCell.OccupyingTile = tile;
-        if (tile != null) {
-            tile.GridCellPos = gridCell.CellPos;
-        }
-    }
-
-    public GridCell GetGridCell(LevelData levelData, CellPos cellPosID) {
-        return levelData.GeneratedGrid[cellPosID.x, cellPosID.y];
+    public GridCell GetGridCell(LevelData currentLevelData, Cell cell) {
+        return currentLevelData.GeneratedGrid[cell.x, cell.y];
     }
     
     private void SpawnTilesLine(int gridLineIndex, GameData gameData, LevelData levelData) {
@@ -51,7 +59,7 @@ public class LevelGridHandler : MonoBehaviour
                 }
             }
             var currentCell = currentGameGrid[i, gridLineIndex];
-            if (currentCell.OccupyingTile == null) {
+            if (!currentCell.HasTile()) {
                 spawnedTiles[i] = SpawnTile(gameData, levelData, currentCell, previousIDs);
             }
             previousIDs.Clear();
