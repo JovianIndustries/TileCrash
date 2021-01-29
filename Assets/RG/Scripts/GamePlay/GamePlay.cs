@@ -1,165 +1,245 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.PlayerLoop;
 
 public class GamePlay : MonoBehaviour
 {
-    [SerializeField] private GameData gameData;
-    [SerializeField] private LevelGridHandler levelGridHandler;
+    [SerializeField]
+    private SessionData sessionData;
+    [SerializeField]
+    private LevelGridHandler levelGridHandler;
 
     private LevelData currentLevel;
     private GridCell[,] levelGrid;
-    private List<GameObject> goToClean = new List<GameObject>();
+    private bool isEvaluating;
 
-    public static readonly UnityEvent<Cell> pointerEvent = new UnityEvent<Cell>();
-    public static readonly UnityEvent<bool> gameIsStarted = new UnityEvent<bool>();
+    private Cell startCell = new Cell(0, 0);
+    private bool shouldMove;
+    private readonly List<Cell> movesLeft = new List<Cell>();
 
-    private void Awake() {
+    private bool shouldRemove;
+    private bool shouldWaitForRemoval;
+    private readonly List<Cell> cellsToRemove = new List<Cell>();
 
-        if(gameData == null) {
+    public PoolManager PoolManager { private get; set; }
+    public GameData GameData { private get; set; }
+
+    public void Init() {
+        if(GameData == null) {
             Debug.LogError("Missing the reference for game config");
             return;
         }
 
-        if(currentLevel == null && gameData.GameLevels.Length > 0) {
-            currentLevel = gameData.GameLevels[0];
-        }
-        else {
-            Debug.LogError("There are not levels configured in the game config", gameData);
-            return;
-        }
-
-        pointerEvent.AddListener(OnClickedTile);
-    }
-
-    public void Play() {
-        currentLevel = gameData.GameLevels[2];
-        PlayInternal(currentLevel);
-    }
-
-    private  void PlayInternal(LevelData selectedLevel) {
-        levelGridHandler.CleanLeveL();
-        levelGridHandler.SpawnLevel(gameData, selectedLevel);
-        levelGrid = levelGridHandler.CurrentGameGrid;
-        gameIsStarted.Invoke(true);
-    }
-
-    private void StartTurn(Cell cell) {
-        RemoveTile(cell);
-        MoveTileRow(cell);
-        EvaluateMove(cell);
-    }
-
-    private void RemoveTile(Cell cell) {
-        var gridCell = levelGridHandler.GetGridCell(currentLevel, cell);
-        Debug.Log($"Destroyed {cell.ToString()}");
-        var go = gridCell.OccupyingTile.gameObject;
-        gridCell.SetTile(null);
-        go.SetActive(false);
-        goToClean.Add(go);
-    }
-
-    private void RemoveTiles(List<Cell> cell) {
-        for(int i = 0; i < cell.Count; i++) {
-            RemoveTile(cell[i]);
-            //DebugMarkToRemove(cell[i]);
+        if(GameData.GameLevels.Length == 0) {
+            Debug.LogError("There are not levels configured in the game config", GameData);
         }
     }
 
-    private void MoveTileRow(Cell selectedTile) {
-        var gridHeight = levelGrid.GetLength(1);
-        int i = 0;
-        while(selectedTile.y + i < gridHeight - 1) {
-            var moveTo = levelGrid[selectedTile.x, selectedTile.y + i];
-            var moveFrom = levelGrid[selectedTile.x, selectedTile.y + 1 + i];
+    private void Start() {
+        Events.StartSessionEvent.AddListener(StartGame);
+        Events.TileClickEvent.AddListener(OnClickedTile);
+    }
 
-            if(moveTo.OccupyingTile == null) {
-                if(moveFrom.OccupyingTile != null) {
-                    moveFrom.OccupyingTile.transform.position = moveTo.CellCenterPos;
-                    moveTo.SetTile(moveFrom.OccupyingTile);
-                    moveFrom.SetTile(null);
+    void Update() {
+        if(shouldRemove) {
+            if(!shouldWaitForRemoval) {
+                for(int i = 0; i < cellsToRemove.Count; i++) {
+                    var gridCell = levelGrid[cellsToRemove[i].x, cellsToRemove[i].y];
+                    var go = gridCell.Tile.gameObject;
+                    StartCoroutine(RemoveDelayer(go, cellsToRemove[i]));
+                    gridCell.SetTile(null);
                 }
+                shouldWaitForRemoval = true;
             }
-            i++;
+
+            if(cellsToRemove.Count < 1) {
+                shouldRemove = false;
+                shouldWaitForRemoval = false;
+            }
+        }
+
+        if(shouldMove) {
+            if(movesLeft.Count > 0) {
+                MoveTiles(movesLeft);
+            }
+            else {
+                shouldMove = false;
+            }
+        }
+    }
+    
+    private void StartGame() {
+        levelGridHandler.CleanLeveL(levelGrid);
+        currentLevel = GameData.GameLevels[sessionData.currenLevelIndex];
+        levelGrid = currentLevel.GeneratedGrid;
+        levelGridHandler.SpawnLevel(GameData, currentLevel);
+    }
+
+    private void OnClickedTile(Cell cell) {
+        if(!isEvaluating) {
+            isEvaluating = true;
+            startCell = cell;
+            StartCoroutine(ExecuteQueue(new List<Cell>() {startCell}));
         }
     }
 
-    private void MoveTiles(List<Cell> gridCells) {
-        for(int i = 0; i < gridCells.Count; i++) {
-            MoveTileRow(gridCells[i]);
+    IEnumerator ExecuteQueue(List<Cell> tilesToScore) {
+        cellsToRemove.AddRange(tilesToScore);
+        shouldRemove = true;
+        while(shouldRemove) {
+            yield return new WaitForEndOfFrame();
         }
+
+        MoveTiles(tilesToScore);
+        while(shouldMove || shouldRemove) {
+            yield return new WaitForEndOfFrame();
+        }
+
+        EvaluateMove();
     }
 
-    private void EvaluateMove(Cell startCell) {
-        List<List<Cell>> tilesToScore = new List<List<Cell>>();
+    IEnumerator RemoveDelayer(GameObject go, Cell cell) {
+        yield return new WaitForSeconds(GameData.TileClickDestroyDelay);
+        cellsToRemove.Remove(cell);
+        PoolManager.ReturnItem(go);
+    }
+
+    private void EvaluateMove() {
+        List<Cell> tilesToScore = new List<Cell>();
         List<Cell> collector = new List<Cell>();
         var startCellY = startCell.y;
         var gridHeight = levelGrid.GetLength(1);
         var gridWidth = levelGrid.GetLength(0);
 
         for(int j = startCellY; j < gridHeight; j++) {
-            collector.Clear();
-            for(int i = 0; i < gridWidth - 1; i++) {
-                var currGridCell = levelGrid[i, j];
-                var adiacGridCell = levelGrid[i + 1, j];
-                
-                if(!adiacGridCell.HasTile() || !currGridCell.HasTile()) {
+            for(int i = 1; i < gridWidth; i++) {
+                var currGridCell = levelGrid[i - 1, j];
+                var adiacGridCell = levelGrid[i, j];
+
+                if(!currGridCell.HasTile()) {
+                    if(TestCollector(collector)) {
+                        tilesToScore.AddRange(new List<Cell>(collector));
+                    }
+
+                    collector.Clear();
                     continue;
                 }
-                
-                if(currGridCell.OccupyingTile.Equals(adiacGridCell.OccupyingTile)) {
+
+                if(!adiacGridCell.HasTile()) {
+                    if(TestCollector(collector)) {
+                        tilesToScore.AddRange(new List<Cell>(collector));
+                    }
+
+                    collector.Clear();
+                    continue;
+                }
+
+                if(adiacGridCell.Tile.Equals(currGridCell.Tile)) {
                     if(!collector.ContainsCell(currGridCell.Cell)) {
                         collector.Add(currGridCell.Cell);
                     }
+
                     collector.Add(adiacGridCell.Cell);
                 }
-                else if(collector.Count < 3) {
+                else {
+                    if(TestCollector(collector)) {
+                        tilesToScore.AddRange(new List<Cell>(collector));
+                    }
+
                     collector.Clear();
                 }
             }
 
-            if(collector.Count > 2) {
-                tilesToScore.Add(new List<Cell>(collector));
+            if(TestCollector(collector)) {
+                tilesToScore.AddRange(new List<Cell>(collector));
             }
-        }
 
-        Debug.Log(tilesToScore.Count);
+            collector.Clear();
+        }
 
         if(tilesToScore.Count > 0) {
-            for(int i = 0; i < tilesToScore.Count; i++) {
-                RemoveTiles(tilesToScore[i]);
-                MoveTiles(tilesToScore[i]);
+            StartCoroutine(ExecuteQueue(tilesToScore));
+        }
+        else {
+            isEvaluating = false;
+            TestBoardEmpty();
+        }
+    }
+
+    private void MoveTiles(List<Cell> gridCells) {
+        gridCells.Reverse();
+        var allTilesToMove = new List<Cell>();
+        movesLeft.Clear();
+        shouldMove = true;
+        for(int i = 0; i < gridCells.Count; i++) {
+            for(int j = gridCells[i].y + 1; j < levelGrid.GetLength(1); j++) {
+                allTilesToMove.Add(new Cell(gridCells[i].x, j));
+            }
+        }
+
+        for(int i = 0; i < allTilesToMove.Count; i++) {
+            var selectedTile = allTilesToMove[i];
+            var moveTo = levelGrid[selectedTile.x, selectedTile.y - 1];
+            var moveFrom = levelGrid[selectedTile.x, selectedTile.y];
+
+            var tile = moveFrom.Tile;
+            if(tile == null) {
+                if(moveFrom.Cell.y + 1 < levelGrid.GetLength(1)) {
+                    movesLeft.Add(new Cell(moveFrom.Cell.x, moveFrom.Cell.y + 1));
+                }
+                continue;
+            }
+            moveTo.SetTile(tile);
+            moveFrom.SetTile(null);
+            tile.StartMovement(moveTo.CellCenterPos, GameData.TileSpeed);
+        }
+    }
+
+    // Added additional testing options. This would normally be a unit test.
+    private bool TestCollector(List<Cell> cells) {
+        var max = cells.Count;
+        if(max < 3) {
+            return false;
+        }
+
+#if UNITY_EDITOR
+        string message = "Collector sanity check (should be consecutive and of the same type):\n";
+        for(int i = 0; i < max; i++) {
+            message += $"Collector at cell {levelGrid[cells[i].x, cells[i].y].Cell.ToString()} of type {levelGrid[cells[i].x, cells[i].y].Tile.TypeID}\n";
+            if(!levelGrid[cells[0].x, cells[0].y].Tile.Equals(levelGrid[cells[i].x, cells[i].y].Tile)) {
+                if(max > 3) {
+                    Debug.LogError(
+                        $"Collector has more than 3 pieces but contains rogue pieces. Ex. {cells[i].ToString()} with tileID {levelGrid[cells[i].x, cells[i].y].Tile.TypeID}");
+                }
+
+                Debug.LogError($"Collector failed test on {cells[i].ToString()} with rogue piece {levelGrid[cells[i].x, cells[i].y].Tile.TypeID}");
+                return false;
             }
 
-            tilesToScore.Clear();
+            if(i > 0 && (Mathf.Abs(cells[i].x - cells[i - 1].x) > 1 || cells[i].y != cells[i - 1].y)) {
+                Debug.LogError($"Collector failed consecutive tile test on {cells[i].ToString()} with tileID {levelGrid[cells[i].x, cells[i].y].Tile.TypeID}");
+                return false;
+            }
         }
-        
-        Clean();
+
+        Debug.Log(message);
+#endif
+        return true;
     }
 
-    private void DebugMarkToRemove(Cell cell) {
-        var gridCell = levelGridHandler.GetGridCell(currentLevel, cell);
-        Debug.Log($"cell {cell.ToString()} tile id is {gridCell.OccupyingTile.TypeID}");
-        var rend = gridCell.OccupyingTile.GetComponent<MeshRenderer>();
-        rend.material.color = Color.cyan;
-    }
-
-    private void Clean() {
-        for(int i = 0; i < goToClean.Count; i++) {
-            Destroy(goToClean[i]);
+    private void TestBoardEmpty() {
+        for(int i = 0; i < levelGrid.GetLength(0); i++) {
+            for(int j = 0; j < levelGrid.GetLength(1); j++) {
+                if(levelGrid[i, j].HasTile()) {
+                    return;
+                }
+            }
         }
-    }
-
-    private void OnClickedTile(Cell cell) {
-        Debug.Log($"Clicked on {cell.x}, {cell.y}");
-        StartTurn(cell);
+        Events.QuitToMainMenuEvent.Invoke();
     }
 
     private void OnDestroy() {
-        pointerEvent.RemoveListener(OnClickedTile);
+        Events.StartSessionEvent.RemoveListener(StartGame);
+        Events.TileClickEvent.RemoveListener(OnClickedTile);
     }
 }

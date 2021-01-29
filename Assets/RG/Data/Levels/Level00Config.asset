@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: Level00Config
   m_EditorClassIdentifier: 
   levelID: Level00
-  bottomLeftGridAnchor: {x: -6, y: -8, z: 0}
-  topRightGridAnchor: {x: 6, y: 8, z: 0}
-  gridSize: {x: 6, y: 8}
+  bottomLeftGridAnchor: {x: -8, y: -10, z: 0}
+  topRightGridAnchor: {x: 8, y: 10, z: 0}
+  gridSize:
+    x: 8
+    y: 10
   tileScaleMultiplier: 1.8

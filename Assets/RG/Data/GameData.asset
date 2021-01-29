@@ -17,8 +17,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 95b5bbb3e617f1a4c97ed030fee1de70, type: 2}
   - {fileID: 11400000, guid: 520c5f0dd07d2da4a8f93954c8ebc68b, type: 2}
   - {fileID: 11400000, guid: ec632f5007b2c4e43aa10e40b17661a6, type: 2}
+  - {fileID: 11400000, guid: 4a28220dc6979a6468351484476145b1, type: 2}
   gameTiles:
   - {fileID: 8936270371906712714, guid: 59e088146f42e4972a3592e98e22674c, type: 3}
   - {fileID: -7377220221651275945, guid: 0b21e0b7fe6c5444eb834245eecf95a6, type: 3}
   - {fileID: 6570733118159818605, guid: 0f42536aef36e4433bc4e1940c87b67c, type: 3}
   - {fileID: 2504802839041123472, guid: 3b8cfe10c1e8d4280b4f3a7e5d11f48d, type: 3}
+  tileSpeed: 15
+  tileClickDestroyDelay: 0.08

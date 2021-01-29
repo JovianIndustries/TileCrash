@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -7,6 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "GameConfiguration", menuName = "Match3/Game Config")]
 public class GameData : ScriptableObject
 {
+    [Header("Main Settings")]
     [Tooltip("Amount of pieces to create a match")]
     [SerializeField]
     private int matchCounter = 3;
@@ -15,11 +14,20 @@ public class GameData : ScriptableObject
     [SerializeField]
     private List<Tile> gameTiles;
 
+    [Header("Other Settings")]
+    [SerializeField]
+    private float tileSpeed = 40f;
+    [SerializeField]
+    private float tileClickDestroyDelay;
+    
     public int MatchCounter => matchCounter;
     public LevelData [] GameLevels => gameLevels;
     public List<Tile> GameTiles => gameTiles;
+    public float TileSpeed => tileSpeed;
+    public float TileClickDestroyDelay => tileClickDestroyDelay;
 
-    private void OnValidate() {
+#if UNITY_EDITOR
+    void OnValidate() {
         for(int i = 0; i < gameTiles.Count; i++) {
             if(gameTiles[i] == null) {
                 continue;
@@ -36,4 +44,5 @@ public class GameData : ScriptableObject
             }
         }
     }
+#endif
 }

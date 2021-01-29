@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6571424}
   - component: {fileID: 2357970}
   - component: {fileID: 8936270371906712714}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Tile00
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -109,4 +109,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   typeID: 9e2da3a9-55c1-4dc7-a20c-e44a258ae076
-  scaleFactor: 0.9

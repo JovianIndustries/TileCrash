@@ -1,15 +1,14 @@
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class GridCell
 {
-    
     private Tile occupyingTile;
     private readonly Cell cell;
 
     public Cell Cell => cell;
     public Vector3 CellCenterPos { get; }
-    public Tile OccupyingTile => occupyingTile;
+    public Tile Tile => occupyingTile;
 
     public GridCell(Cell cell, Vector2 cellCenterPosition) {
         this.cell = cell;
@@ -17,7 +16,7 @@ public class GridCell
     }
 
     public bool HasTile() {
-        return OccupyingTile != null;
+        return Tile != null;
     }
 
     public void SetTile(Tile tile) {
@@ -28,6 +27,7 @@ public class GridCell
     }
 }
 
+[Serializable]
 public struct Cell
 {
     public int x;
@@ -49,5 +49,11 @@ public struct Cell
         }
         var cell = (Cell) obj;
         return cell.x == x && cell.y == y;
+    }
+
+    public override int GetHashCode() {
+        unchecked {
+            return (x * 397) ^ y;
+        }
     }
 }

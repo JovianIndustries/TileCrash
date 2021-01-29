@@ -1,55 +1,51 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 public class LevelGridHandler : MonoBehaviour
 {
+    [SerializeField]
+    private GameObject backgroundPrefab;
+    
     private GridCell[,] currentGameGrid;
-    public GridCell[,] CurrentGameGrid => currentGameGrid;
+    private GameObject background;
+    
+    public PoolManager PoolManager { get; set; }
 
     public void SpawnLevel(GameData gameData, LevelData levelData) {
         currentGameGrid = levelData.GeneratedGrid;
+        
+        if(background == null) {
+            background = Instantiate(backgroundPrefab, transform);
+        }
+        var pos = background.transform.position;
+        background.transform.position = new Vector3(pos.x, pos.y, 2f);
+        background.transform.localScale = levelData.BackgroundScale;
+        
         for(int i = 0; i < currentGameGrid.GetLength(1); i++) {
             SpawnTilesLine(i, gameData, levelData);
         }
     }
 
-    public void CleanLeveL() {
-        if(currentGameGrid == null) {
-            return;
+    public void CleanLeveL(GridCell [,] gameGrid) {
+        if(gameGrid == null) {
+            gameGrid = new GridCell[0, 0];
         }
-        for(int i = 0; i < currentGameGrid.GetLength(0); i++) {
-            for(int j = 0; j < currentGameGrid.GetLength(1); j++) {
-                if(currentGameGrid[i, j].HasTile()) {
-                    Destroy(currentGameGrid[i, j].OccupyingTile.gameObject);
-                    currentGameGrid[i, j].SetTile(null);
+        for(int i = 0; i < gameGrid.GetLength(0); i++) {
+            for(int j = 0; j < gameGrid.GetLength(1); j++) {
+                var gridCell = gameGrid[i, j];
+                if(gridCell.HasTile()) {
+                    gridCell.Tile.IsMoving = false;
+                    PoolManager.ReturnItem(gridCell.Tile.gameObject);
+                    gameGrid[i, j].SetTile(null);
                 }
             }
         }
-        currentGameGrid = null;
     }
 
-    public Tile SpawnTile(GameData gameData, LevelData levelData, GridCell currentCell, List<string> previousIDs = null) {
-        var tiles = gameData.GameTiles;
-        var tileToSpawn = GetRandomTile(tiles, previousIDs);
-        var spawnedTileObject = Instantiate(tileToSpawn.gameObject, currentCell.CellCenterPos, Quaternion.identity, transform);
-        var scale = spawnedTileObject.transform.localScale;
-        var spawnedTile = spawnedTileObject.GetComponent<Tile>();
-        spawnedTileObject.transform.localScale = scale * levelData.TileScaleMultiplier;
-        currentCell.SetTile(spawnedTile);
-        return spawnedTile;
-    }
-
-    public GridCell GetGridCell(LevelData currentLevelData, Cell cell) {
-        return currentLevelData.GeneratedGrid[cell.x, cell.y];
-    }
-    
     private void SpawnTilesLine(int gridLineIndex, GameData gameData, LevelData levelData) {
         var gridWidth = currentGameGrid.GetLength(0);
-        Tile[] spawnedTiles = new Tile[gridWidth];
+        var spawnedTiles = new Tile[gridWidth];
 
         for(int i = 0; i < gridWidth; i++) {
             List<string> previousIDs = new List<string>();
@@ -61,11 +57,23 @@ public class LevelGridHandler : MonoBehaviour
             var currentCell = currentGameGrid[i, gridLineIndex];
             if (!currentCell.HasTile()) {
                 spawnedTiles[i] = SpawnTile(gameData, levelData, currentCell, previousIDs);
+                spawnedTiles[i].gameObject.SetActive(true);
             }
             previousIDs.Clear();
         }
     }
+    
+    private Tile SpawnTile(GameData gameData, LevelData levelData, GridCell currentCell, List<string> previousIDs = null) {
+        var tiles = gameData.GameTiles;
+        var tileToSpawn = GetRandomTile(tiles, previousIDs);
+        var spawnedTileObject = PoolManager.GetPoolItem(tileToSpawn.TypeID, transform, levelData.TileScaleMultiplier);
+        spawnedTileObject.transform.localPosition = currentCell.CellCenterPos;
+        var spawnedTile = spawnedTileObject.GetComponent<Tile>();
+        currentCell.SetTile(spawnedTile);
+        return spawnedTile;
+    }
 
+    // It will avoid creating sets of more than two same type consecutive pieces
     private Tile GetRandomTile(List<Tile> gameTiles, List<string> previousIDs) {
         var tileIndex = Random.Range(0, gameTiles.Count);
         var tile = gameTiles[tileIndex];
