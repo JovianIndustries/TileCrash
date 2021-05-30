@@ -1,3 +1,3 @@
-# Match 3 quick demo
+# Match 3 Unity demo
 
-A match 3 quick demo that I have once completed for a test.
+A match 3 demo that I have once completed for a Unity test.
